@@ -18,16 +18,9 @@
   "build-options": {
     "build-args": [
       "--share=network"
-    ],
-    "env": {
-      "CARGO_HOME": "/run/build/rust-toolchain/cargo",
-      "RUSTUP_HOME": "/run/build/rust-toolchain/rustup"
-    }
+    ]
   },
   "cleanup": [
-    "/bin/cargo",
-    "/bin/rustc",
-    "/bin/rustup",
     "/include",
     "/lib/pkgconfig",
     "/share/pkgconfig",
@@ -40,18 +33,6 @@
     "*.a"
   ],
   "modules": [
-    {
-      "name": "rust-toolchain",
-      "buildsystem": "simple",
-      "build-commands": [
-        "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path --default-toolchain stable",
-        "mkdir -p /app/bin",
-        "ln -sf /run/build/rust-toolchain/cargo/bin/cargo /app/bin/cargo",
-        "ln -sf /run/build/rust-toolchain/cargo/bin/rustc /app/bin/rustc",
-        "ln -sf /run/build/rust-toolchain/cargo/bin/rustup /app/bin/rustup",
-        "cargo --version"
-      ]
-    },
     {
       "name": "pintrust",
       "buildsystem": "meson",
@@ -76,5 +57,8 @@
         }
       ]
     }
+  ],
+  "sdk-extensions": [
+    "org.freedesktop.Sdk.Extension.rust-stable"
   ]
 }

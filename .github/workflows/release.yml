@@ -20,11 +20,10 @@ jobs:
       - name: Install Flatpak and runtimes
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder file desktop-file-utils
+          sudo apt-get install -y flatpak file desktop-file-utils
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak install --user -y --noninteractive flathub \
-            org.gnome.Sdk//50 org.gnome.Platform//50 \
-            org.gnome.Sdk//51 org.gnome.Platform//51
+            org.gnome.Sdk//50 org.gnome.Platform//50
 
       - name: Build AppImage
         run: |
@@ -37,12 +36,6 @@ jobs:
             --env=WORKDIR="$PWD" \
             --command=bash org.gnome.Sdk//50 \
             -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path && . "$CARGO_HOME/env" && cd "$WORKDIR" && ./build-appimage.sh'
-
-      - name: Build Flatpak bundle
-        run: |
-          flatpak-builder --user --force-clean --disable-rofiles-fuse \
-            --repo=flatpak-repo build-flatpak flatpak/com.lurim412.PintRust.json
-          flatpak build-bundle flatpak-repo PintRust-1.0.0-x86_64.flatpak com.lurim412.PintRust
 
       - name: Assemble release assets
         run: |
@@ -59,7 +52,6 @@ jobs:
           EOF
           sha256sum \
             PintRust-x86_64.AppImage \
-            PintRust-1.0.0-x86_64.flatpak \
             com.lurim412.PintRust.flatpakref > SHA256SUMS
           cat > release-notes.md <<'EOF'
           A lightweight, native Pinterest client for GNOME, built with Rust,
@@ -79,8 +71,9 @@ jobs:
           ./PintRust-x86_64.AppImage
           ```
 
-          The Flatpak requires `org.gnome.Platform//51`. The AppImage requires
-          `bwrap` and a `/var/tmp` that allows executing files.
+          The Flatpak repository is hosted on GitHub Pages. It requires
+          `org.gnome.Platform//51`. The AppImage requires `bwrap` and a
+          `/var/tmp` that allows executing files.
 
           PintRust is an unofficial client and is not affiliated with or
           endorsed by Pinterest, Inc.
@@ -93,7 +86,6 @@ jobs:
           if gh release view v1.0.0 >/dev/null 2>&1; then
             gh release upload v1.0.0 --clobber \
               PintRust-x86_64.AppImage \
-              PintRust-1.0.0-x86_64.flatpak \
               com.lurim412.PintRust.flatpakref \
               SHA256SUMS
           else
@@ -101,7 +93,6 @@ jobs:
               --title "PintRust 1.0.0" \
               --notes-file release-notes.md \
               PintRust-x86_64.AppImage \
-              PintRust-1.0.0-x86_64.flatpak \
               com.lurim412.PintRust.flatpakref \
               SHA256SUMS
           fi
