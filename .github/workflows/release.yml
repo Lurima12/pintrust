@@ -24,8 +24,7 @@ jobs:
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak install --user -y --noninteractive flathub \
             org.gnome.Sdk//50 org.gnome.Platform//50 \
-            org.gnome.Sdk//51 org.gnome.Platform//51 \
-            org.freedesktop.Sdk.Extension.rust-stable//25.08
+            org.gnome.Sdk//51 org.gnome.Platform//51
 
       - name: Build AppImage
         run: |
