@@ -29,13 +29,13 @@ jobs:
       - name: Build AppImage
         run: |
           flatpak run \
-            --directory="$PWD" \
             --filesystem="$PWD" \
             --filesystem=/tmp \
             --share=network \
             --env=CARGO_HOME="$PWD/.cargo-home" \
+            --env=WORKDIR="$PWD" \
             --command=bash org.gnome.Sdk//50 \
-            -c 'export PATH=/usr/lib/sdk/rust-stable/bin:$PATH; ./build-appimage.sh'
+            -c 'cd "$WORKDIR" && export PATH=/usr/lib/sdk/rust-stable/bin:$PATH && ./build-appimage.sh'
 
       - name: Build Flatpak bundle
         run: |
