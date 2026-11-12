@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Install Flatpak and runtimes
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder file desktop-file-utils
+          flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install -y --noninteractive flathub \
+            org.gnome.Sdk//50 org.gnome.Platform//50 \
+            org.gnome.Sdk//51 org.gnome.Platform//51
+
+      - name: Build AppImage
+        run: |
+          flatpak run \
+            --directory="$PWD" \
+            --filesystem="$PWD" \
+            --filesystem=/tmp \
+            --share=network \
+            --env=CARGO_HOME="$PWD/.cargo-home" \
+            --command=bash org.gnome.Sdk//50 \
+            -c 'export PATH=/usr/lib/sdk/rust-stable/bin:$PATH; ./build-appimage.sh'
+
+      - name: Build Flatpak bundle
+        run: |
+          flatpak-builder --force-clean --disable-rofiles-fuse \
+            --repo=flatpak-repo build-flatpak flatpak/com.lurim412.PintRust.json
+          flatpak build-bundle flatpak-repo PintRust-1.0.0-x86_64.flatpak com.lurim412.PintRust
+
+      - name: Assemble release assets
+        run: |
+          cp build-appimage/PintRust-x86_64.AppImage .
+          cat > com.lurim412.PintRust.flatpakref <<'EOF'
+          [Flatpak Ref]
+          Title=PintRust
+          Name=com.lurim412.PintRust
+          Branch=master
+          Url=https://lurima12.github.io/pintrust/repo/
+          SuggestRemoteName=pintrust
+          RuntimeRepo=https://flathub.org/repo/flathub.flatpakrepo
+          IsRuntime=false
+          EOF
+          sha256sum \
+            PintRust-x86_64.AppImage \
+            PintRust-1.0.0-x86_64.flatpak \
+            com.lurim412.PintRust.flatpakref > SHA256SUMS
+          cat > release-notes.md <<'EOF'
+          A lightweight, native Pinterest client for GNOME, built with Rust,
+          GTK4, libadwaita and WebKitGTK 6.0.
+
+          ### Install with Flatpak
+
+          ```sh
+          flatpak install --user https://lurima12.github.io/pintrust/com.lurim412.PintRust.flatpakref
+          flatpak run com.lurim412.PintRust
+          ```
+
+          ### Run the AppImage
+
+          ```sh
+          chmod +x PintRust-x86_64.AppImage
+          ./PintRust-x86_64.AppImage
+          ```
+
+          The Flatpak requires `org.gnome.Platform//51`. The AppImage requires
+          `bwrap` and a `/var/tmp` that allows executing files.
+
+          PintRust is an unofficial client and is not affiliated with or
+          endorsed by Pinterest, Inc.
+          EOF
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view v1.0.0 >/dev/null 2>&1; then
+            gh release upload v1.0.0 --clobber \
+              PintRust-x86_64.AppImage \
+              PintRust-1.0.0-x86_64.flatpak \
+              com.lurim412.PintRust.flatpakref \
+              SHA256SUMS
+          else
+            gh release create v1.0.0 \
+              --title "PintRust 1.0.0" \
+              --notes-file release-notes.md \
+              PintRust-x86_64.AppImage \
+              PintRust-1.0.0-x86_64.flatpak \
+              com.lurim412.PintRust.flatpakref \
+              SHA256SUMS
+          fi
