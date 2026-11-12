@@ -1,0 +1,8 @@
+[Flatpak Ref]
+Title=PintRust
+Name=com.lurim412.PintRust
+Branch=master
+Url=https://lurima12.github.io/pintrust/repo/
+SuggestRemoteName=pintrust
+RuntimeRepo=https://flathub.org/repo/flathub.flatpakrepo
+IsRuntime=false

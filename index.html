@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PintRust — Pinterest for GNOME</title>
+<style>
+  :root { color-scheme: light dark; --accent: #ef282e; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    font-family: system-ui, "Cantarell", sans-serif;
+    background: light-dark(#f6f5f4, #1d1d1d); color: light-dark(#222, #eee);
+  }
+  main { max-width: 46rem; padding: 3rem 1.5rem; }
+  header { display: flex; gap: 1.25rem; align-items: center; margin-bottom: 1.5rem; }
+  img { width: 96px; height: 96px; border-radius: 20px; }
+  h1 { margin: 0 0 .25rem; font-size: 2.4rem; letter-spacing: -.02em; }
+  p.lead { margin: 0; color: light-dark(#5a5a5a, #b5b5b5); }
+  h2 { margin-top: 2.25rem; font-size: 1.15rem; }
+  code, pre {
+    font-family: ui-monospace, "Source Code Pro", monospace; font-size: .9rem;
+    background: light-dark(#e9e7e4, #2c2c2c); border-radius: 8px;
+  }
+  code { padding: .15rem .4rem; }
+  pre { padding: .9rem 1rem; overflow-x: auto; }
+  pre code { padding: 0; background: none; }
+  a { color: var(--accent); }
+  .buttons { display: flex; gap: .75rem; flex-wrap: wrap; margin: 1.25rem 0 .5rem; }
+  .button {
+    display: inline-block; padding: .65rem 1.1rem; border-radius: 10px;
+    background: var(--accent); color: #fff; text-decoration: none; font-weight: 600;
+  }
+  .button.secondary {
+    background: transparent; color: inherit;
+    border: 1px solid light-dark(#c9c5c0, #4a4a4a);
+  }
+  footer { margin-top: 3rem; font-size: .85rem; color: light-dark(#6b6b6b, #9e9e9e); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icon.svg" alt="PintRust icon">
+    <div>
+      <h1>PintRust</h1>
+      <p class="lead">A lightweight, native Pinterest client for GNOME.</p>
+    </div>
+  </header>
+
+  <p>
+    Built with Rust, GTK4, libadwaita and WebKitGTK 6.0. Persistent login,
+    native navigation, light/dark theme sync, and OAuth popups that stay in
+    the app.
+  </p>
+
+  <div class="buttons">
+    <a class="button" href="https://github.com/Lurima12/pintrust/releases/latest">Download</a>
+    <a class="button secondary" href="https://github.com/Lurima12/pintrust">Source code</a>
+  </div>
+
+  <h2>Install with Flatpak</h2>
+  <pre><code>flatpak install --user https://lurima12.github.io/pintrust/com.lurim412.PintRust.flatpakref
+flatpak run com.lurim412.PintRust</code></pre>
+
+  <h2>Run the AppImage</h2>
+  <pre><code>chmod +x PintRust-x86_64.AppImage
+./PintRust-x86_64.AppImage</code></pre>
+
+  <h2>Requirements</h2>
+  <p>
+    The Flatpak needs <code>org.gnome.Platform//51</code>. The AppImage needs
+    <code>bwrap</code> and a <code>/var/tmp</code> that allows executing files.
+  </p>
+
+  <footer>
+    PintRust is an unofficial client. It is not affiliated with or endorsed by
+    Pinterest, Inc. Pinterest is a trademark of Pinterest, Inc.
+  </footer>
+</main>
+</body>
+</html>
