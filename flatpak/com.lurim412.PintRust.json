@@ -5,6 +5,10 @@
   "sdk": "org.gnome.Sdk",
   "command": "pintrust",
 
+  "sdk-extensions": [
+    "org.freedesktop.Sdk.Extension.rust-stable"
+  ],
+
   "finish-args": [
     "--share=network",
     "--share=ipc",

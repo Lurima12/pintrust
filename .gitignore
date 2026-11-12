@@ -7,6 +7,9 @@
 /squashfs-root
 /.flatpak-builder
 /.cargo-home
+/.rustup-home
+/flatpak-repo
+/build-flatpak
 *.AppImage
 *.flatpak
 *.flatpakrepo

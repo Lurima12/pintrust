@@ -24,7 +24,8 @@ jobs:
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak install --user -y --noninteractive flathub \
             org.gnome.Sdk//50 org.gnome.Platform//50 \
-            org.gnome.Sdk//51 org.gnome.Platform//51
+            org.gnome.Sdk//51 org.gnome.Platform//51 \
+            org.freedesktop.Sdk.Extension.rust-stable//25.08
 
       - name: Build AppImage
         run: |
@@ -33,9 +34,10 @@ jobs:
             --filesystem=/tmp \
             --share=network \
             --env=CARGO_HOME="$PWD/.cargo-home" \
+            --env=RUSTUP_HOME="$PWD/.rustup-home" \
             --env=WORKDIR="$PWD" \
             --command=bash org.gnome.Sdk//50 \
-            -c 'cd "$WORKDIR" && export PATH=/usr/lib/sdk/rust-stable/bin:$PATH && ./build-appimage.sh'
+            -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path && . "$CARGO_HOME/env" && cd "$WORKDIR" && ./build-appimage.sh'
 
       - name: Build Flatpak bundle
         run: |
