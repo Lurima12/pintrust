@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=PintRust
+GenericName=Pinterest Client
+Comment=Browse Pinterest in a native window
+Exec=pintrust %U
+Icon=com.lurim412.PintRust
+Terminal=false
+Type=Application
+Categories=Network;WebBrowser;
+Keywords=pinterest;pins;boards;inspiration;
+StartupNotify=true
+StartupWMClass=com.lurim412.PintRust

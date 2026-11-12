@@ -1,0 +1,116 @@
+#!/bin/sh
+# AppRun for the PintRust AppImage.
+#
+# linuxdeploy may wrap this script in an automatically generated AppRun that
+# first sources the GTK plugin's apprun-hooks (GSettings schemas, GdkPixbuf
+# loaders, GTK modules, ...) and then executes this file as AppRun.wrapped.
+# Everything below therefore only has to cover what the GTK plugin cannot know
+# about: WebKitGTK's helper processes.
+set -eu
+
+HERE="$(dirname "$(readlink -f "$0")")"
+
+# WebKitGTK spawns WebKitWebProcess, WebKitNetworkProcess and
+# WebKitGPUProcess as separate executables (plus an injected-bundle resource
+# directory). They are bundled in usr/libexec/wk.
+#
+# A release WebKitGTK build ignores WEBKIT_EXEC_PATH and instead execs the
+# directory that was compiled into libwebkitgtk (normally
+# /usr/libexec/webkitgtk-6.0). build-appimage.sh rewrites that string to the
+# fixed path /var/tmp/pintrust, so real files have to exist there at runtime.
+#
+# Symlinks are not enough: WebKit's own bubblewrap sandbox mounts a fresh
+# tmpfs on /tmp and does not expose the AppImage mount, so a link that points
+# back into the AppDir cannot be resolved by the sandboxed process. The helper
+# binaries are tiny (a few KiB each), so AppRun copies them instead.
+WK_RUNTIME_DIR=/var/tmp/pintrust
+
+if [ -L "$WK_RUNTIME_DIR" ]; then
+    echo "error: $WK_RUNTIME_DIR is a symbolic link; refusing to use it." >&2
+    echo "Remove it and start the AppImage again." >&2
+    exit 1
+fi
+
+if [ ! -e "$WK_RUNTIME_DIR" ]; then
+    # umask keeps the directory private even if another process races us
+    # between mkdir and chmod.
+    (umask 077 && mkdir "$WK_RUNTIME_DIR") || true
+fi
+
+if [ ! -d "$WK_RUNTIME_DIR" ] || [ -L "$WK_RUNTIME_DIR" ]; then
+    echo "error: could not create $WK_RUNTIME_DIR as a directory." >&2
+    exit 1
+fi
+
+if [ "$(stat -c '%u' "$WK_RUNTIME_DIR")" != "$(id -u)" ]; then
+    echo "error: $WK_RUNTIME_DIR is owned by another user." >&2
+    echo "Remove it (as its owner) and start the AppImage again." >&2
+    exit 1
+fi
+
+chmod 700 "$WK_RUNTIME_DIR"
+
+# Copy only when the bundled helper differs from the cached one. Using a
+# temporary file plus rename keeps a concurrently starting instance from
+# executing a half-written binary.
+install_helper() {
+    source_path="$1"
+    target_path="$2"
+
+    if [ ! -f "$source_path" ]; then
+        return 0
+    fi
+
+    if [ -f "$target_path" ] && [ ! -L "$target_path" ] && cmp -s "$source_path" "$target_path"; then
+        return 0
+    fi
+
+    temporary_path="$target_path.tmp.$$"
+    rm -f "$temporary_path"
+    cp -f "$source_path" "$temporary_path"
+    chmod 0755 "$temporary_path"
+    mv -f "$temporary_path" "$target_path"
+}
+
+for helper in WebKitWebProcess WebKitNetworkProcess WebKitGPUProcess; do
+    install_helper "$HERE/usr/libexec/wk/$helper" "$WK_RUNTIME_DIR/$helper"
+done
+
+# Some WebKit releases ship an injected-bundle directory next to the helper
+# executables. Replace a cached copy wholesale so files removed by an update
+# do not linger.
+if [ -d "$HERE/usr/libexec/wk/injected-bundle" ]; then
+    bundle_staging="$WK_RUNTIME_DIR/.injected-bundle.$$"
+    rm -rf "$bundle_staging"
+    cp -a "$HERE/usr/libexec/wk/injected-bundle" "$bundle_staging"
+    rm -rf "$WK_RUNTIME_DIR/injected-bundle"
+    mv "$bundle_staging" "$WK_RUNTIME_DIR/injected-bundle"
+fi
+
+# Honoured by developer-mode WebKitGTK builds and harmless everywhere else.
+# The release build uses the compiled-in paths patched by build-appimage.sh.
+export WEBKIT_EXEC_PATH="$WK_RUNTIME_DIR"
+
+if [ -d "$WK_RUNTIME_DIR/injected-bundle" ]; then
+    export WEBKIT_INJECTED_BUNDLE_PATH="$WK_RUNTIME_DIR/injected-bundle"
+fi
+
+export PATH="$HERE/usr/bin${PATH:+:$PATH}"
+export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+# Some distributions install libraries into a multiarch subdirectory. The
+# bundled helper binaries have an $ORIGIN rpath, but libraries that are
+# dlopen()ed by name still need this directory on the search path.
+for libdir in "$HERE"/usr/lib/*-linux-gnu*; do
+    if [ -d "$libdir" ]; then
+        LD_LIBRARY_PATH="$libdir:$LD_LIBRARY_PATH"
+    fi
+done
+export LD_LIBRARY_PATH
+
+# Fallbacks for manual AppDir assembly where the GTK plugin hook is absent.
+if [ -z "${GSETTINGS_SCHEMA_DIR:-}" ] && [ -d "$HERE/usr/share/glib-2.0/schemas" ]; then
+    export GSETTINGS_SCHEMA_DIR="$HERE/usr/share/glib-2.0/schemas"
+fi
+
+exec "$HERE/usr/bin/pintrust" "$@"

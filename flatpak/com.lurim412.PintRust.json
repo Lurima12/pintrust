@@ -1,0 +1,63 @@
+{
+  "app-id": "com.lurim412.PintRust",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "51",
+  "sdk": "org.gnome.Sdk",
+  "command": "pintrust",
+
+  "finish-args": [
+    "--share=network",
+    "--share=ipc",
+    "--socket=fallback-x11",
+    "--socket=wayland",
+    "--socket=pulseaudio",
+    "--device=dri",
+    "--talk-name=org.freedesktop.portal.Desktop",
+    "--talk-name=org.freedesktop.secrets",
+    "--filesystem=xdg-download"
+  ],
+
+  "build-options": {
+    "build-args": ["--share=network"]
+  },
+
+  "cleanup": [
+    "/include",
+    "/lib/pkgconfig",
+    "/share/pkgconfig",
+    "/share/aclocal",
+    "/share/man",
+    "/share/doc",
+    "/share/gtk-doc",
+    "/share/vala",
+    "*.la",
+    "*.a"
+  ],
+
+  "modules": [
+    {
+      "name": "pintrust",
+      "buildsystem": "meson",
+      "config-opts": [
+        "--buildtype=release",
+        "-Dprofile=release"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "..",
+          "skip": [
+            ".cargo-home",
+            ".flatpak-builder",
+            ".git",
+            "build",
+            "build-appimage",
+            "build-tools",
+            "dist",
+            "target"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+[package]
+name = "pintrust"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.85"
+description = "A lightweight, native Pinterest desktop wrapper for GNOME"
+license = "MIT"
+keywords = ["gtk", "pinterest", "webkit", "gnome"]
+categories = ["gui"]
+
+[build-dependencies]
+glib-build-tools = "0.22"
+
+[dependencies]
+adw = { package = "libadwaita", version = "0.9", features = ["v1_6"] }
+gio = "0.22"
+glib = "0.22"
+gtk = { package = "gtk4", version = "0.11", features = ["v4_16"] }
+url = "2.5"
+webkit6 = { package = "webkit6", version = "0.6", features = ["v2_46"] }
+
+[profile.release]
+opt-level = "s"
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"

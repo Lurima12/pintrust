@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.lurim412.PintRust</id>
+
+  <name>PintRust</name>
+  <summary>Browse Pinterest in a native window</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <description>
+    <p>
+      A lightweight, native Pinterest client for GNOME. It embeds Pinterest in
+      WebKitGTK with a compact libadwaita header bar, persistent login sessions,
+      smooth video playback and automatic light/dark theme synchronisation with
+      the desktop.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Native GTK4 / libadwaita window with back, forward, home and reload controls</li>
+      <li>Persistent cookies and cache, so you stay signed in between restarts</li>
+      <li>Third-party links open in your default browser</li>
+      <li>Google, Facebook and Apple sign-in popups stay inside the app</li>
+      <li>Follows the system light or dark style immediately</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">com.lurim412.PintRust.desktop</launchable>
+
+  <url type="homepage">https://www.pinterest.com/</url>
+
+  <developer id="com.lurim412">
+    <name>PintRust Contributors</name>
+  </developer>
+
+  <provides>
+    <binary>pintrust</binary>
+  </provides>
+
+  <categories>
+    <category>Network</category>
+  </categories>
+
+  <keywords>
+    <keyword>pinterest</keyword>
+    <keyword>pins</keyword>
+    <keyword>boards</keyword>
+    <keyword>inspiration</keyword>
+  </keywords>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="1.0.0" date="2026-11-12">
+      <description>
+        <p>Initial release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

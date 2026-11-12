@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/com/lurim412/PintRust/icons">
+    <file alias="scalable/apps/com.lurim412.PintRust.svg">icons/hicolor/scalable/apps/com.lurim412.PintRust.svg</file>
+  </gresource>
+</gresources>

@@ -1,0 +1,13 @@
+/target
+/build
+/build-appimage
+/build-tools
+/build-dir
+/AppDir
+/squashfs-root
+/.flatpak-builder
+/.cargo-home
+*.AppImage
+*.flatpak
+*.flatpakrepo
+/dist
