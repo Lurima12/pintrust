@@ -55,6 +55,13 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.1" date="2026-11-13">
+      <description>
+        <p>Fix the Flatpak never loading Pinterest.</p>
+        <p>Remove the theme script that could make WebKit spin and freeze the window.</p>
+        <p>Cover the whole site with the desktop's light/dark preference.</p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-11-12">
       <description>
         <p>Initial release.</p>

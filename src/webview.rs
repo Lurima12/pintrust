@@ -55,7 +55,6 @@ pub fn settings() -> webkit6::Settings {
                     .enable_smooth_scrolling(true)
                     .enable_page_cache(true)
                     .enable_2d_canvas_acceleration(true)
-                    .enable_dns_prefetching(true)
                     .enable_developer_extras(cfg!(debug_assertions))
                     .enable_html5_local_storage(true)
                     .enable_html5_database(true)
@@ -67,7 +66,6 @@ pub fn settings() -> webkit6::Settings {
                     .enable_encrypted_media(true)
                     .media_playback_allows_inline(true)
                     .media_playback_requires_user_gesture(false)
-                    .hardware_acceleration_policy(webkit6::HardwareAccelerationPolicy::Always)
                     .enable_site_specific_quirks(true)
                     .enable_back_forward_navigation_gestures(true)
                     // window.open() must still be allowed from user gestures;

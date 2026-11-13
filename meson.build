@@ -1,6 +1,6 @@
 project(
   'pintrust',
-  version: '1.0.0',
+  version: '1.0.1',
   license: 'MIT',
   meson_version: '>= 0.63.0',
 )

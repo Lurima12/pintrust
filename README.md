@@ -90,13 +90,13 @@ meson compile -C build
 
 ### Flatpak
 
-The manifest targets the current GNOME runtime (`org.gnome.Platform//51`):
+The manifest targets the current GNOME runtime (`org.gnome.Platform//50`):
 
 ```sh
 flatpak remote-add --if-not-exists flathub \
     https://flathub.org/repo/flathub.flatpakrepo
 
-flatpak install flathub org.gnome.Platform//51 org.gnome.Sdk//51
+flatpak install flathub org.gnome.Platform//50 org.gnome.Sdk//50
 
 flatpak-builder --user --install --force-clean \
     build-dir flatpak/com.lurim412.PintRust.json
