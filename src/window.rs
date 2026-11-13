@@ -7,6 +7,7 @@ use glib::clone;
 use webkit6::prelude::*;
 
 use crate::config;
+use crate::settings::{NavItem, NavPlacement, Settings};
 use crate::theme_injector::ThemeInjector;
 use crate::webview;
 
@@ -21,6 +22,11 @@ mod imp {
         pub stack: RefCell<Option<gtk::Stack>>,
         pub status_page: RefCell<Option<adw::StatusPage>>,
         pub failed_uri: RefCell<Option<String>>,
+        pub header: RefCell<Option<adw::HeaderBar>>,
+        pub overlay: RefCell<Option<gtk::Overlay>>,
+        pub nav: RefCell<Option<gtk::Box>>,
+        pub nav_buttons: RefCell<Vec<(crate::settings::NavItem, gtk::Button)>>,
+        pub settings: RefCell<crate::settings::Settings>,
     }
 
     #[glib::object_subclass]
@@ -59,23 +65,13 @@ impl Window {
     }
 
     fn setup_ui(&self, app: &adw::Application) {
+        self.imp().settings.replace(Settings::load());
+
         let header = adw::HeaderBar::new();
-
-        let back = header_button("go-previous-symbolic", "win.back", "Back (Alt+Left)");
-        let forward = header_button("go-next-symbolic", "win.forward", "Forward (Alt+Right)");
-        let nav = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        nav.add_css_class("linked");
-        nav.append(&back);
-        nav.append(&forward);
-        header.pack_start(&nav);
-
-        let home = header_button("go-home-symbolic", "win.home", "Home (Alt+Home)");
-        header.pack_start(&home);
-
-        let reload = header_button("view-refresh-symbolic", "win.reload", "Reload (Ctrl+R)");
-        header.pack_end(&reload);
+        header.add_css_class("pintrust-header");
 
         let menu = gio::Menu::new();
+        menu.append(Some("Preferences"), Some("win.preferences"));
         menu.append(
             Some("Open Current Page in Browser"),
             Some("win.open-in-browser"),
@@ -107,6 +103,22 @@ impl Window {
         progress.set_visible(false);
         overlay.add_overlay(&progress);
         self.imp().progress.replace(Some(progress.clone()));
+
+        // The navigation buttons can float in any corner of the page or stay in
+        // the title bar; the placement and the order are user preferences. All
+        // four buttons drive window actions, so their enabled state still
+        // follows the history.
+        let nav = gtk::Box::new(gtk::Orientation::Horizontal, 2);
+        let mut nav_buttons = Vec::with_capacity(NavItem::ALL.len());
+        for item in NavItem::ALL {
+            nav_buttons.push((item, nav_button(item)));
+        }
+        self.imp().nav_buttons.replace(nav_buttons);
+
+        self.imp().nav.replace(Some(nav));
+        self.imp().header.replace(Some(header));
+        self.imp().overlay.replace(Some(overlay.clone()));
+        self.apply_navigation_settings();
 
         let status_page = adw::StatusPage::builder()
             .icon_name("network-offline-symbolic")
@@ -212,6 +224,7 @@ impl Window {
         self.add_simple_action("forward", |window| window.go_forward());
         self.add_simple_action("home", |window| window.go_home());
         self.add_simple_action("reload", |window| window.reload());
+        self.add_simple_action("preferences", |window| window.show_preferences());
         self.add_simple_action("open-in-browser", |window| window.open_current_in_browser());
         self.add_simple_action("about", |window| window.show_about());
 
@@ -266,6 +279,238 @@ impl Window {
             self.action_set_enabled("back", webview.can_go_back());
             self.action_set_enabled("forward", webview.can_go_forward());
         }
+    }
+
+    /// Applies the saved placement and button order to the navigation box.
+    fn apply_navigation_settings(&self) {
+        let settings = self.imp().settings.borrow().clone();
+        let (Some(nav), Some(header), Some(overlay)) = (
+            self.imp().nav.borrow().clone(),
+            self.imp().header.borrow().clone(),
+            self.imp().overlay.borrow().clone(),
+        ) else {
+            return;
+        };
+
+        // Re-append the buttons in the requested left-to-right order. Appending
+        // an existing child moves it to the end of the box.
+        for item in settings.order {
+            let buttons = self.imp().nav_buttons.borrow();
+            let Some((_, button)) = buttons.iter().find(|(candidate, _)| *candidate == item) else {
+                continue;
+            };
+            if button.parent().is_some() {
+                nav.remove(button);
+            }
+            nav.append(button);
+        }
+
+        // The box itself moves between the title bar and the page overlay.
+        if let Some(parent) = nav.parent() {
+            if let Some(current_overlay) = parent.downcast_ref::<gtk::Overlay>() {
+                current_overlay.remove_overlay(&nav);
+            } else {
+                nav.unparent();
+            }
+        }
+
+        match settings.placement {
+            NavPlacement::Header => {
+                nav.remove_css_class("pintrust-nav");
+                nav.add_css_class("pintrust-nav-inline");
+                nav.set_halign(gtk::Align::Start);
+                nav.set_valign(gtk::Align::Center);
+                nav.set_margin_start(0);
+                nav.set_margin_end(0);
+                nav.set_margin_top(0);
+                nav.set_margin_bottom(0);
+                header.pack_start(&nav);
+            }
+            placement => {
+                nav.remove_css_class("pintrust-nav-inline");
+                nav.add_css_class("pintrust-nav");
+                nav.set_halign(match placement {
+                    NavPlacement::TopLeft | NavPlacement::BottomLeft => gtk::Align::Start,
+                    _ => gtk::Align::End,
+                });
+                nav.set_valign(match placement {
+                    NavPlacement::TopLeft | NavPlacement::TopRight => gtk::Align::Start,
+                    _ => gtk::Align::End,
+                });
+                nav.set_margin_start(18);
+                nav.set_margin_end(18);
+                nav.set_margin_top(18);
+                nav.set_margin_bottom(18);
+                overlay.add_overlay(&nav);
+            }
+        }
+    }
+
+    fn set_navigation_placement(&self, placement: NavPlacement) {
+        {
+            let mut settings = self.imp().settings.borrow_mut();
+            if settings.placement == placement {
+                return;
+            }
+            settings.placement = placement;
+            settings.save();
+        }
+        self.apply_navigation_settings();
+    }
+
+    fn move_navigation_item(&self, index: usize, delta: isize) {
+        let mut settings = self.imp().settings.borrow_mut();
+        if !settings.move_item(index, delta) {
+            return;
+        }
+        settings.save();
+        drop(settings);
+        self.apply_navigation_settings();
+    }
+
+    fn reset_navigation_settings(&self) {
+        {
+            let mut settings = self.imp().settings.borrow_mut();
+            *settings = Settings::default();
+            settings.save();
+        }
+        self.apply_navigation_settings();
+    }
+
+    fn show_preferences(&self) {
+        let settings = self.imp().settings.borrow().clone();
+
+        // Position is a radio group rather than a drop-down: radio rows only
+        // change the setting when the user activates them, so nothing can be
+        // written while the dialog is being built or torn down.
+        let position_group = adw::PreferencesGroup::builder()
+            .title("Navigation buttons")
+            .description("Where the back, forward, home and reload buttons are shown.")
+            .build();
+
+        let mut checks = Vec::with_capacity(NavPlacement::ALL.len());
+        let mut first: Option<gtk::CheckButton> = None;
+        for placement in NavPlacement::ALL {
+            let row = adw::ActionRow::builder().title(placement.label()).build();
+            row.set_activatable(true);
+
+            let check = gtk::CheckButton::new();
+            if let Some(first) = &first {
+                check.set_group(Some(first));
+            } else {
+                first = Some(check.clone());
+            }
+            check.set_active(placement == settings.placement);
+            check.connect_toggled(clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |check| {
+                    if check.is_active() {
+                        window.set_navigation_placement(placement);
+                    }
+                }
+            ));
+            row.connect_activated(clone!(
+                #[weak]
+                check,
+                move |_| check.set_active(true)
+            ));
+
+            row.add_prefix(&check);
+            position_group.add(&row);
+            checks.push((placement, check));
+        }
+        let checks = Rc::new(checks);
+
+        let order_group = adw::PreferencesGroup::builder()
+            .title("Button order")
+            .description("Use the arrows to arrange the buttons from left to right.")
+            .build();
+
+        let rows: Rc<RefCell<Vec<OrderRow>>> = Rc::new(RefCell::new(Vec::new()));
+        for _ in 0..NavItem::ALL.len() {
+            let row = adw::ActionRow::new();
+            let left = gtk::Button::from_icon_name("go-previous-symbolic");
+            left.add_css_class("flat");
+            left.set_tooltip_text(Some("Move left"));
+            let right = gtk::Button::from_icon_name("go-next-symbolic");
+            right.add_css_class("flat");
+            right.set_tooltip_text(Some("Move right"));
+
+            let suffix = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+            suffix.add_css_class("linked");
+            suffix.append(&left);
+            suffix.append(&right);
+            row.add_suffix(&suffix);
+
+            order_group.add(&row);
+            rows.borrow_mut().push(OrderRow { row, left, right });
+        }
+        refresh_order_rows(&rows.borrow(), &settings);
+
+        for (index, order_row) in rows.borrow().iter().enumerate() {
+            order_row.left.connect_clicked(clone!(
+                #[weak(rename_to = window)]
+                self,
+                #[strong]
+                rows,
+                move |_| {
+                    window.move_navigation_item(index, -1);
+                    refresh_order_rows(&rows.borrow(), &window.imp().settings.borrow());
+                }
+            ));
+            order_row.right.connect_clicked(clone!(
+                #[weak(rename_to = window)]
+                self,
+                #[strong]
+                rows,
+                move |_| {
+                    window.move_navigation_item(index, 1);
+                    refresh_order_rows(&rows.borrow(), &window.imp().settings.borrow());
+                }
+            ));
+        }
+
+        let reset_row = adw::ActionRow::builder()
+            .title("Reset navigation")
+            .subtitle("Restore the default position and order.")
+            .build();
+        let reset = gtk::Button::with_label("Reset");
+        reset.add_css_class("flat");
+        reset.connect_clicked(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[strong]
+            rows,
+            #[strong]
+            checks,
+            move |_| {
+                window.reset_navigation_settings();
+                refresh_order_rows(&rows.borrow(), &window.imp().settings.borrow());
+                let default = NavPlacement::default();
+                for (placement, check) in checks.iter() {
+                    check.set_active(*placement == default);
+                }
+            }
+        ));
+        reset_row.add_suffix(&reset);
+
+        let reset_group = adw::PreferencesGroup::new();
+        reset_group.add(&reset_row);
+
+        let page = adw::PreferencesPage::new();
+        page.add(&position_group);
+        page.add(&order_group);
+        page.add(&reset_group);
+
+        let preferences = adw::PreferencesDialog::builder()
+            .title("Preferences")
+            .content_width(520)
+            .content_height(620)
+            .follows_content_size(false)
+            .build();
+        preferences.add(&page);
+        preferences.present(Some(self));
     }
 
     /// Handles URLs passed on the command line (or via the desktop file).
@@ -354,10 +599,31 @@ impl Window {
     }
 }
 
-fn header_button(icon: &str, action: &str, tooltip: &str) -> gtk::Button {
-    let button = gtk::Button::from_icon_name(icon);
-    button.set_action_name(Some(action));
-    button.set_tooltip_text(Some(tooltip));
+fn nav_button(item: NavItem) -> gtk::Button {
+    let button = gtk::Button::from_icon_name(item.icon());
+    button.set_action_name(Some(item.action()));
+    button.set_tooltip_text(Some(item.tooltip()));
     button.add_css_class("flat");
     button
+}
+
+/// One reorderable row in the preferences dialog.
+struct OrderRow {
+    row: adw::ActionRow,
+    left: gtk::Button,
+    right: gtk::Button,
+}
+
+fn refresh_order_rows(rows: &[OrderRow], settings: &Settings) {
+    for (index, order_row) in rows.iter().enumerate() {
+        let Some(item) = settings.order.get(index) else {
+            break;
+        };
+        order_row.row.set_title(item.label());
+        order_row
+            .row
+            .set_subtitle(&format!("Position {}", index + 1));
+        order_row.left.set_sensitive(index > 0);
+        order_row.right.set_sensitive(index + 1 < settings.order.len());
+    }
 }

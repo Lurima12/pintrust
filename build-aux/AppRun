@@ -113,4 +113,35 @@ if [ -z "${GSETTINGS_SCHEMA_DIR:-}" ] && [ -d "$HERE/usr/share/glib-2.0/schemas"
     export GSETTINGS_SCHEMA_DIR="$HERE/usr/share/glib-2.0/schemas"
 fi
 
+# ---------------------------------------------------------------------------
+# Display backend
+# ---------------------------------------------------------------------------
+#
+# linuxdeploy's GTK plugin forces GDK_BACKEND=x11 ("Crash with Wayland backend
+# on Wayland"), which is a workaround for old GTK3/WebKitGTK builds. PintRust
+# uses GTK4 and WebKitGTK 6.0, and the Flatpak build runs natively on Wayland
+# without problems, while the AppImage was forced through XWayland. WebKit's
+# compositing surface does not follow window resizes there, and the page can
+# stop repainting altogether (the "freeze" users see).
+#
+# Use the native backend again and let GDK fall back to X11 by itself when
+# there is no Wayland compositor. PINTRUST_FORCE_X11=1 restores the old
+# behaviour if the native backend misbehaves on a particular driver.
+if [ "${PINTRUST_FORCE_X11:-0}" = "1" ]; then
+    export GDK_BACKEND=x11
+else
+    unset GDK_BACKEND
+fi
+
+# WebKit's DMA-BUF renderer passes rendered buffers to the compositor through
+# EGL without a copy. It only works when the host driver, the compositor and
+# the libEGL that WebKit loads all agree; an AppImage cannot bundle Mesa, so
+# mismatches show up as a frozen page or content that ignores window resizes.
+# Keep the fast path on Wayland and use shared-memory buffers under X11, where
+# the driver combination is the most likely to break. Set
+# WEBKIT_DISABLE_DMABUF_RENDERER=0 to force the fast path everywhere.
+if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    export WEBKIT_DISABLE_DMABUF_RENDERER="${WEBKIT_DISABLE_DMABUF_RENDERER:-1}"
+fi
+
 exec "$HERE/usr/bin/pintrust" "$@"

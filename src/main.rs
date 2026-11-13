@@ -1,5 +1,6 @@
 mod application;
 mod config;
+mod settings;
 mod theme_injector;
 mod webview;
 mod window;

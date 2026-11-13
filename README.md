@@ -9,8 +9,10 @@ of Pinterest and Rust.
 
 ## Features
 
-- Native GTK4 / libadwaita window with a compact header bar: Back, Forward,
-  Home, Reload, main menu.
+- Native GTK4 / libadwaita window with a slim header bar and a main menu.
+- Back, Forward, Home and Reload buttons float over the page (bottom-right by
+  default) and can be moved to any corner, put back in the title bar, or
+  reordered from the built-in preferences dialog.
 - Loading progress indicator overlaid at the top of the page.
 - Persistent cookies, local storage, IndexedDB and cache in
   `$XDG_DATA_HOME/com.lurim412.PintRust` and
@@ -168,11 +170,43 @@ nothing else in the library shifts; the extra `/` characters are valid path
 separators. `AppRun` is wrapped by linuxdeploy so the GTK plugin's hooks still
 run first.
 
+#### Display backend
+
+linuxdeploy's GTK plugin exports `GDK_BACKEND=x11`, a workaround for old
+GTK3/WebKitGTK builds. With GTK4 and WebKitGTK 6.0 that forces the whole
+application through XWayland, where WebKit's compositing surface does not always
+follow window resizes and the page can stop repainting. `build-aux/AppRun`
+therefore unsets `GDK_BACKEND` again, so GDK uses Wayland when it is available
+and falls back to X11 by itself otherwise. Under X11 it also sets
+`WEBKIT_DISABLE_DMABUF_RENDERER=1`: an AppImage cannot bundle Mesa, and a
+mismatch between the host EGL driver and the bundled libraries has the same
+symptom. `PINTRUST_FORCE_X11=1` restores the old, forced-X11 behaviour.
+
 ## Configuration
+
+### Navigation buttons
+
+Open the main menu and choose **Preferences** (or press <kbd>Ctrl</kbd>+<kbd>,</kbd>)
+to change:
+
+- **Position** — bottom right (default), bottom left, top right, top left, or
+  back inside the title bar.
+- **Button order** — use the arrows to arrange Home, Back, Forward and Reload
+  from left to right. The default order is Home, Back, Forward, Reload.
+
+Changes apply immediately and are stored in
+`$XDG_CONFIG_HOME/pintrust/settings.conf`
+(`~/.config/pintrust/settings.conf`, or
+`~/.var/app/com.lurim412.PintRust/config/pintrust/settings.conf` inside the
+Flatpak). The file is plain `key=value` text; delete it to restore the defaults.
+
+### Environment variables
 
 | Environment variable | Purpose |
 | --- | --- |
 | `PINTRUST_USER_AGENT` | Override the bundled Safari user agent. Useful if Pinterest changes its browser sniffing. |
+| `PINTRUST_FORCE_X11` | AppImage only: set to `1` to run through XWayland instead of the native Wayland backend. |
+| `WEBKIT_DISABLE_DMABUF_RENDERER` | AppImage only: set to `0` to re-enable WebKit's DMA-BUF renderer under X11 (it is disabled there because driver mismatches make the page freeze). |
 | `WEBKIT_EXEC_DIR` | AppImage build only: override the directory containing `WebKitWebProcess`. |
 
 ### Data locations

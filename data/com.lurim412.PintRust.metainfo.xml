@@ -17,7 +17,8 @@
     </p>
     <p>Features:</p>
     <ul>
-      <li>Native GTK4 / libadwaita window with back, forward, home and reload controls</li>
+      <li>Native GTK4 / libadwaita window with floating back, forward, home and reload buttons</li>
+      <li>Choose the button position and order from the preferences dialog</li>
       <li>Persistent cookies and cache, so you stay signed in between restarts</li>
       <li>Third-party links open in your default browser</li>
       <li>Google, Facebook and Apple sign-in popups stay inside the app</li>
@@ -55,6 +56,13 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.2" date="2026-11-13">
+      <description>
+        <p>Floating navigation buttons with a slimmer title bar.</p>
+        <p>New preferences to choose the button position and order.</p>
+        <p>AppImage: use the native Wayland backend and fix content not following window resizes.</p>
+      </description>
+    </release>
     <release version="1.0.1" date="2026-11-13">
       <description>
         <p>Fix the Flatpak never loading Pinterest.</p>
